@@ -20,7 +20,7 @@ def register(clientID, clientSecret, isAdmin):
         connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
-        query = f"INSERT INTO clients (\"ClientID\", \"ClientSecret\", \"IsAdmin\") VALUES (%s, %s, %s)"
+        query = "INSERT INTO clients (\"ClientID\", \"ClientSecret\", \"IsAdmin\") VALUES (%s, %s, %s)"
 
         cursor.execute(query, (clientID, clientSecret, str(isAdmin)))
         connection.commit()
@@ -79,9 +79,62 @@ def authenticate(clientID, clientSecret):
             cursor.close()
             connection.close()
 
-def verify(token):
+def validate(token):
+    connection = None
     try:
-        decoded_token = jwt.decode(token, auth_secret, algorithms=['HS256'])
-        return decoded_token
-    except (Exception) as error:
+        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        cursor = connection.cursor()
+
+        query = f"SELECT * FROM blacklist WHERE \"token\" = \'{token}\'"
+
+        cursor.execute(query)
+
+        records = cursor.fetchall()
+
+        if cursor.rowcount == 0:    
+            try:
+                decoded_token = jwt.decode(token, auth_secret, algorithms=['HS256'])
+                return decoded_token
+            except (Exception) as error:
+                return None
+        else:
+            return None
+    
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+        if connection is not None:
+            cursor.close()
+            connection.close()
+
         return None
+
+    finally:
+        if connection is not None:
+            cursor.close()
+            connection.close()
+
+def invalidate(token):
+    connection = None
+    try:
+        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        cursor = connection.cursor()
+
+        query = f"INSERT INTO blacklist(\"token\") VALUES (\'{token}\')"
+
+        cursor.execute(query)
+        connection.commit()
+                
+        return True
+    
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+        if connection is not None:
+            cursor.close()
+            connection.close()
+
+        return False
+
+    finally:
+        if connection is not None:
+            cursor.close()
+            connection.close()
