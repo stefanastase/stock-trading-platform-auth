@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 
 # Get environment variables
 host = os.getenv('HOST_NAME')
-db_name = os.getenv('DB_NAME')
+auth_db_name = os.getenv('AUTH_DB_NAME')
+portfolios_db_name = os.getenv('PORTFOLIOS_DB_NAME')
 db_user = os.getenv('DB_USER')
 db_pass = os.getenv('DB_PASSWORD')
 auth_secret = os.getenv('AUTH_SECRET')
@@ -17,7 +18,7 @@ def register(clientID, clientSecret, isAdmin):
     connection = None
 
     try:
-        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
         query = "INSERT INTO clients (\"ClientID\", \"ClientSecret\", \"IsAdmin\") VALUES (%s, %s, %s)"
@@ -25,6 +26,29 @@ def register(clientID, clientSecret, isAdmin):
         cursor.execute(query, (clientID, clientSecret, str(isAdmin)))
         connection.commit()
         
+        cursor.close()
+        connection.close()
+
+        # Create portfolio table for the new client
+        connection = psycopg2.connect(host=host, dbname=portfolios_db_name, user=db_user, password=db_pass)
+        cursor = connection.cursor()
+
+        create_query = f"\
+                CREATE TABLE {clientID} (\
+                \"ID\" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 100 CACHE 1 ),\
+                \"Name\" character varying(128) COLLATE pg_catalog.\"default\" NOT NULL,\
+                \"Quantity\" integer  NOT NULL,\
+                CONSTRAINT {clientID}_pkey PRIMARY KEY (\"ID\"),\
+                CONSTRAINT {clientID}_unique UNIQUE (\"Name\"))"
+
+        cursor.execute(create_query)
+        connection.commit()
+
+        # Add empty cash component to newly created table
+        insert_query = f"INSERT INTO {clientID} (\"Name\", \"Quantity\") VALUES ('Cash', '0')"
+        cursor.execute(insert_query)
+        connection.commit()
+
         return True
     
     except (Exception, psycopg2.DatabaseError) as error:
@@ -44,7 +68,7 @@ def authenticate(clientID, clientSecret):
     connection = None
 
     try:
-        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
         query = " SELECT * FROM clients WHERE \"ClientID\"='" + clientID + "' AND \"ClientSecret\"='" + clientSecret + "'"
         cursor.execute(query)
@@ -82,7 +106,7 @@ def authenticate(clientID, clientSecret):
 def validate(token):
     connection = None
     try:
-        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
         query = f"SELECT * FROM blacklist WHERE \"token\" = \'{token}\'"
@@ -116,7 +140,7 @@ def validate(token):
 def invalidate(token):
     connection = None
     try:
-        connection = psycopg2.connect(host=host, dbname=db_name, user=db_user, password=db_pass)
+        connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
         query = f"INSERT INTO blacklist(\"token\") VALUES (\'{token}\')"
