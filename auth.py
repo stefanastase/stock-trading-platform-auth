@@ -1,6 +1,7 @@
 from flask import Flask, request, Response
 from json import dumps
 import hashlib
+from datetime import datetime, timedelta
 
 import authUtils
 
@@ -52,6 +53,13 @@ def verify():
 
     if verifyResult is None:
         return Response(status=401)
+    elif datetime.strptime(verifyResult.get('expirationTime'), "%m/%d/%Y, %H:%M:%S") < datetime.utcnow(): 
+        # Invalidate token by adding to blacklist
+        invalidateResult = authUtils.invalidate(token)
+
+        if invalidateResult:
+            return Response(dumps({"error": "Token expired. Please log-in again."}), status=401, mimetype='application/json')
+        
     return Response(dumps(verifyResult), status=200, mimetype='application/json')
 
 # Route for logging out

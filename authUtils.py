@@ -75,10 +75,11 @@ def authenticate(clientID, clientSecret):
 
         if cursor.rowcount == 1:
             row = records[0]
+            now = datetime.now() + timedelta(seconds=expire_time_seconds)
             payload = {
                 "id": row[0],
                 "clientID": row[1],
-                "expirationTime": str(datetime.utcnow() + timedelta(seconds=expire_time_seconds)) # TODO Change format here
+                "expirationTime": now.strftime("%m/%d/%Y, %H:%M:%S")
                 }
             
             token = jwt.encode(payload, auth_secret, algorithm='HS256')
