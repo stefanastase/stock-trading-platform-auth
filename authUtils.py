@@ -1,6 +1,4 @@
 import os
-import json
-
 import psycopg2
 import jwt
 from datetime import datetime, timedelta
@@ -37,7 +35,7 @@ def register(clientID, clientSecret, isAdmin):
                 CREATE TABLE {clientID} (\
                 \"ID\" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 100 CACHE 1 ),\
                 \"Name\" character varying(128) COLLATE pg_catalog.\"default\" NOT NULL,\
-                \"Quantity\" integer  NOT NULL,\
+                \"Quantity\" real  NOT NULL,\
                 CONSTRAINT {clientID}_pkey PRIMARY KEY (\"ID\"),\
                 CONSTRAINT {clientID}_unique UNIQUE (\"Name\"))"
 
@@ -45,7 +43,7 @@ def register(clientID, clientSecret, isAdmin):
         connection.commit()
 
         # Add empty cash component to newly created table
-        insert_query = f"INSERT INTO {clientID} (\"Name\", \"Quantity\") VALUES ('Cash', '0')"
+        insert_query = f"INSERT INTO {clientID} (\"Name\", \"Quantity\") VALUES ('Cash', '0.0')"
         cursor.execute(insert_query)
         connection.commit()
 
