@@ -2,20 +2,25 @@ import os
 import psycopg2
 import jwt
 from datetime import datetime, timedelta
+import sys
 
 # Get environment variables
 host = os.getenv('HOST_NAME')
 auth_db_name = os.getenv('AUTH_DB_NAME')
 portfolios_db_name = os.getenv('PORTFOLIOS_DB_NAME')
 db_user = os.getenv('DB_USER')
-db_pass = os.getenv('DB_PASSWORD')
-auth_secret = os.getenv('AUTH_SECRET')
+db_pass_file = os.getenv('DB_PASSWORD_FILE')
+auth_secret_file = os.getenv('AUTH_SECRET_FILE')
 expire_time_seconds = int(os.getenv('EXPIRE_TIME_SEC'))
 
 def register(clientID, clientSecret, isAdmin):
     connection = None
 
     try:
+        file = open(db_pass_file, "r")
+        db_pass = file.read() 
+        file.close()
+        
         connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
@@ -40,17 +45,20 @@ def register(clientID, clientSecret, isAdmin):
                 CONSTRAINT {clientID}_unique UNIQUE (\"Name\"))"
 
         cursor.execute(create_query)
-        connection.commit()
 
         # Add empty cash component to newly created table
         insert_query = f"INSERT INTO {clientID} (\"Name\", \"Quantity\") VALUES ('Cash', '0.0')"
         cursor.execute(insert_query)
+
+        grant_query = f"GRANT ALL PRIVILEGES ON {clientID} TO portfolios_user"
+        cursor.execute(grant_query)
+
         connection.commit()
 
         return True
     
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        print(error, file=sys.stderr)
         if connection is not None:
             cursor.close()
             connection.close()
@@ -66,6 +74,14 @@ def authenticate(clientID, clientSecret):
     connection = None
 
     try:
+        file = open(db_pass_file, "r")
+        db_pass = file.read() 
+        file.close()
+
+        file = open(auth_secret_file, "r")
+        auth_secret = file.read()
+        file.close()
+
         connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
         query = " SELECT * FROM clients WHERE \"ClientID\"='" + clientID + "' AND \"ClientSecret\"='" + clientSecret + "'"
@@ -105,6 +121,14 @@ def authenticate(clientID, clientSecret):
 def validate(token):
     connection = None
     try:
+        file = open(db_pass_file, "r")
+        db_pass = file.read() 
+        file.close()
+        
+        file = open(auth_secret_file, "r")
+        auth_secret = file.read()
+        file.close()
+
         connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 
@@ -139,6 +163,10 @@ def validate(token):
 def invalidate(token):
     connection = None
     try:
+        file = open(db_pass_file, "r")
+        db_pass = file.read() 
+        file.close()
+
         connection = psycopg2.connect(host=host, dbname=auth_db_name, user=db_user, password=db_pass)
         cursor = connection.cursor()
 

@@ -24,8 +24,8 @@ def register():
     return Response(status=400)
 
 # Route for authentication
-@app.route("/auth", methods=["POST"])
-def auth():	
+@app.route("/login", methods=["POST"])
+def login():	
     client_id = request.form.get("client_id")
     client_secret = request.form.get("client_secret")
 
