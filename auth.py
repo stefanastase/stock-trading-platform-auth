@@ -33,7 +33,7 @@ def register():
     # Get hashed secret using SHA256
     hashed_secret = hashlib.sha256(bytes(client_secret, 'utf-8')).hexdigest()
 
-    registerResult = authUtils.register(client_id, hashed_secret, False, app.logger) # TODO allow admins to add admins on a different route
+    registerResult = authUtils.register(client_id, hashed_secret, app.logger)
     
     if registerResult:
         app.logger.info(f"User {client_id} registered into the system.")

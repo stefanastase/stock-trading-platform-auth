@@ -14,7 +14,7 @@ db_pass_file = os.getenv('DB_PASSWORD_FILE')
 auth_secret_file = os.getenv('AUTH_SECRET_FILE')
 expire_time_seconds = int(os.getenv('EXPIRE_TIME_SEC'))
 
-def register(clientID, clientSecret, isAdmin, logger):
+def register(clientID, clientSecret, logger):
     connection = None
 
     try:
@@ -27,9 +27,9 @@ def register(clientID, clientSecret, isAdmin, logger):
         cursor = connection.cursor()
         logger.debug("Connection with database established.")
         
-        query = "INSERT INTO clients (\"ClientID\", \"ClientSecret\", \"IsAdmin\") VALUES (%s, %s, %s)"
+        query = "INSERT INTO clients (\"ClientID\", \"ClientSecret\") VALUES (%s, %s)"
 
-        cursor.execute(query, (clientID, clientSecret, str(isAdmin)))
+        cursor.execute(query, (clientID, clientSecret))
         connection.commit()
 
         logger.debug(f"User {clientID} inserted into the clients table.")
