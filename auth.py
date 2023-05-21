@@ -78,7 +78,7 @@ def verify():
         return Response(status=401)
     elif datetime.strptime(verifyResult.get('expirationTime'), "%m/%d/%Y, %H:%M:%S") < datetime.utcnow(): 
         # Invalidate token by adding to blacklist
-        app.logger.info(f"Token {token} expiration time was " + datetime.strptime(verifyResult.get('expirationTime'), "%m/%d/%Y, %H:%M:%S"))
+        app.logger.info(f"Token {token} expiration time was " + verifyResult.get('expirationTime'))
         invalidateResult = authUtils.invalidate(token, app.logger)
 
         if not invalidateResult is None:
